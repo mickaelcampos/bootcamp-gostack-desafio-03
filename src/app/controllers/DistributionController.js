@@ -1,3 +1,4 @@
+import * as Yup from 'yup';
 import {
   format,
   setSeconds,
@@ -8,6 +9,7 @@ import {
 } from 'date-fns';
 import { Op } from 'sequelize';
 import Delivery from '../models/Delivery';
+import File from '../models/File';
 
 class DistributionController {
   /**
@@ -35,14 +37,14 @@ class DistributionController {
    * Retirada para entrega
    * O entregador só pode fazer 5 retiradas por dia
    */
-  async update(req, res) {
+  async store(req, res) {
     const delivery = await Delivery.findByPk(req.body.delivery_id);
 
     if (!delivery) {
       return res.status(400).json({ error: 'Delivery not found ' });
     }
 
-    const interval = ['00:00', '18:00'];
+    const interval = ['00:00', '23:00'];
 
     const formattedInterval = interval.map(time => {
       const [hour, minute] = time.split(':');
@@ -90,6 +92,51 @@ class DistributionController {
     delivery.save();
 
     return res.json(delivery);
+  }
+
+  /**
+   * Insere foto da assinatura
+   */
+  async update(req, res) {
+    const schema = Yup.object().shape({
+      delivery_id: Yup.number().required(),
+      signature_id: Yup.number().required(),
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ error: 'Validation fails' });
+    }
+
+    /**
+     * verify signature_id is valid
+     */
+
+    const signatureExists = await File.findByPk(req.body.signature_id);
+
+    if (!signatureExists) {
+      return res.status(400).json({ error: 'signature_id is invalid' });
+    }
+
+    /**
+     * verify email exists
+     */
+    const deliveryExists = await Delivery.findOne({
+      where: { delivery_id: req.body.delivery_id },
+    });
+
+    if (!deliveryExists) {
+      return res.status(400).json({ error: "Delivery don't exists." });
+    }
+
+    const { delivery_id, name, signature_id } = await deliveryExists.update(
+      req.body
+    );
+
+    return res.json({
+      delivery_id,
+      name,
+      signature_id,
+    });
   }
 
   /**
