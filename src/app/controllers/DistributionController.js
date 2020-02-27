@@ -14,7 +14,7 @@ import File from '../models/File';
 class DistributionController {
   /**
    * GET https://fastfeet.com/deliveryman/1/deliveries
-   * listar encomendas que ja foram entregues por ele, com base em seu DI de cadastro
+   * listar encomendas que ja foram entregues por ele, com base em seu ID de cadastro
    */
   async index(req, res) {
     if (!req.params.id) {
